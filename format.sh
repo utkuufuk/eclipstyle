@@ -1,0 +1,5 @@
+WORKSPACE="$1"
+TARGET="${WORKSPACE}/.metadata/.plugins/org.eclipse.core.runtime/.settings/"
+cp "./org.eclipse.jdt.core.prefs" "${TARGET}"
+cp "./org.eclipse.jdt.ui.prefs" "${TARGET}"
+cp "./org.eclipse.ui.editors.prefs" "${TARGET}"
