@@ -24,17 +24,6 @@ java -jar eclipstyle.jar D:\Dev\Workspaces\eclipstyle D:\Dev\Workspaces
 java -jar eclipstyle.jar ~/eclipse_workspaces/eclipstyle ~/eclipse_workspaces
 ```
 
-### Build From Source
-Unix:
-``` sh
-./build.sh
-```
-
-Windows:
-``` cmd
-build.bat
-```
-
-### Download Binary
+### Download Binary Release
 You can download the latest release [here](https://github.com/utkuufuk/eclipstyle/releases).
 
