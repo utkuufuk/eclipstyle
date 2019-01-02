@@ -25,9 +25,14 @@ java -jar eclipstyle.jar ~/eclipse_workspaces/eclipstyle ~/eclipse_workspaces
 ```
 
 ### Build From Source
+Unix:
 ``` sh
-javac Eclipstyle.java
-jar cmvf META-INF/MANIFEST.mf eclipstyle.jar Eclipstyle.class Eclipstyle$1.class Eclipstyle$Condition.class
+./build.sh
+```
+
+Windows:
+``` cmd
+build.bat
 ```
 
 ### Download Binary
