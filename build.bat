@@ -1,2 +1,2 @@
-javac Formatter.java
-jar cmvf META-INF/MANIFEST.mf formatter.jar Formatter.class Formatter$1.class Formatter$Condition.class
+javac Eclipstyle.java
+jar cmvf META-INF/MANIFEST.mf eclipstyle.jar Eclipstyle.class Eclipstyle$1.class Eclipstyle$Condition.class
