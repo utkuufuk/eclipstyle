@@ -12,6 +12,12 @@ import java.util.Scanner;
 
 public class Formatter
 {
+    public enum Condition
+    {
+        STARTS_WITH,
+        DOES_NOT_START_WITH;
+    }
+
     private static final String PRINT_MARGIN_KEY = "org.eclipse.jdt.core.formatter.lineSplit";
     private static final String SUB_DIR = "/.metadata/.plugins/org.eclipse.core.runtime/.settings/";
 
