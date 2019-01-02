@@ -1,7 +1,7 @@
 # eclipstyle
 **Propagate code style & format accross multiple workspaces.**
 
-Build (or import) a formatter profile **once:**
+Build (or [import](formatter.xml)) a formatter profile **once:**
 ![Example](example.png)
 *You no longer have to export it as an XML file and then import it from each and every workspace:*
 
