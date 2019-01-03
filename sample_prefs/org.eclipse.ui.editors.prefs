@@ -1,3 +1,4 @@
+AbstractTextEditor.Color.Background=28,31,34
 AbstractTextEditor.Color.Background.SystemDefault=false
 AbstractTextEditor.Color.SelectionBackground.SystemDefault=false
 AbstractTextEditor.Color.SelectionForeground.SystemDefault=false
@@ -34,5 +35,6 @@ predarkestdark.org.eclipse.cdt.ui.occurrenceIndicationColor=0,0,0
 predarkestdark.printMarginColor=208,208,208
 predarkestdark.pydevOccurrenceIndicationColor=0,0,0
 printMargin=true
+printMarginColumn=100
 spellingEnabled=false
 writeOccurrenceIndicationColor=79,79,79
