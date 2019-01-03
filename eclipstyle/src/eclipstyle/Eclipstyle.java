@@ -5,7 +5,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
@@ -25,68 +26,127 @@ public class Eclipstyle implements Callable<Void>
     private static final String PREFS_SUB_DIR =
         "/.metadata/.plugins/org.eclipse.core.runtime/.settings/";
 
-    @Parameters(index = "0", description = "Source workspace path.")
-    private Path sourceWorkspace;
+    @Parameters(index = "0", description = "Program command (import/export).")
+    private String command;
 
-    @Parameters(index = "1", description = "Parent directory of target workspaces.")
-    private Path workspacesDir;
+    @Parameters(index = "1", description = "Source path.")
+    private Path from;
 
-    private static void updateWorkspace(Path source, Path target) throws IOException
+    @Parameters(index = "2", description = "Destionation path.")
+    private Path to;
+
+    /**
+     * Copies a preferences file from a workspace (or an arbitrary directory) into another workspace.
+     * 
+     * @param source source workspace/directory
+     * @param target target workspace
+     * @param prefsName name of the preferences file
+     * @throws IOException upon failure to locate the preferences file
+     */
+    private static void copyPrefs(Path source, Path target, String prefsName) throws IOException
     {
-        // evaluate source file paths to read formatter preferences
-        Path uiWbenchSrc = Paths.get(source + PREFS_SUB_DIR + UI_WBENCH_PREFS_FILENAME);
-        Path uiEditorsSrc = Paths.get(source + PREFS_SUB_DIR + UI_EDITORS_PREFS_FILENAME);
-        Path jdtCoreSrc = Paths.get(source + PREFS_SUB_DIR + JDT_CORE_PREFS_FILENAME);
-        Path jdtUiSrc = Paths.get(source + PREFS_SUB_DIR + JDT_UI_PREFS_FILENAME);
-
-        // evaluate source file paths to read formatter preferences
-        Path uiWbenchTarget = Paths.get(target + PREFS_SUB_DIR + UI_WBENCH_PREFS_FILENAME);
-        Path uiEditorsTarget = Paths.get(target + PREFS_SUB_DIR + UI_EDITORS_PREFS_FILENAME);
-        Path jdtCoreTarget = Paths.get(target + PREFS_SUB_DIR + JDT_CORE_PREFS_FILENAME);
-        Path jdtUiTarget = Paths.get(target + PREFS_SUB_DIR + JDT_UI_PREFS_FILENAME);
-
-        // copy prefs from source workspace into target workspace 
-        Files.copy(uiWbenchSrc, uiWbenchTarget, StandardCopyOption.REPLACE_EXISTING);
-        Files.copy(uiEditorsSrc, uiEditorsTarget, StandardCopyOption.REPLACE_EXISTING);
-        Files.copy(jdtCoreSrc, jdtCoreTarget, StandardCopyOption.REPLACE_EXISTING);
-        Files.copy(jdtUiSrc, jdtUiTarget, StandardCopyOption.REPLACE_EXISTING);       
+        if (Files.exists(source.resolve(prefsName)))
+        {
+            source = source.resolve(prefsName);
+        }
+        else if (Files.exists(Paths.get(source + PREFS_SUB_DIR + prefsName)))
+        {
+            source = Paths.get(source + PREFS_SUB_DIR + prefsName);
+        }
+        else
+        {
+            throw new IOException("Could not locate prefs file " + prefsName + " in " + source);
+        }
+        target = target.resolve(prefsName);
+        Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
     }
 
-    @Override
-    public Void call() throws Exception
+    /**
+     * Returns a set of valid Eclipse workspace paths within a parent directory.
+     * 
+     * @param parentDir parent directory
+     * @return a set of workspace paths
+     * @throws IOException
+     */
+    private static Set<Path> getValidWorkspaces(Path parentDir) throws IOException
     {
-        // get workspace paths
-        List<Path> targetWorkspaces = null;
-
         try
         {
-            targetWorkspaces = Files.walk(workspacesDir, 1)
+            Set<Path> workspaces = new HashSet<Path>();
+            Set<Path> subDirs = Files.walk(parentDir, 1)
                 .filter(Files::isDirectory)
-                .collect(Collectors.toList());
-            targetWorkspaces.remove(0);
-        }
-        catch (IOException e1)
-        {
-            System.err.println("Unable to retrieve sub-directories of " + workspacesDir);
-        }
+                .collect(Collectors.toSet());
+            subDirs.remove(parentDir);
 
-        for (Path target : targetWorkspaces)
-        {
-            if (!Files.isDirectory(Paths.get(target + PREFS_SUB_DIR)))
+            for (Path ws : subDirs)
             {
-                System.err.println("Not an Eclipse workspace: " + target);
-                continue;
+                if (!Files.isDirectory(Paths.get(ws + PREFS_SUB_DIR)))
+                {
+                    System.err.println("Not an Eclipse workspace: " + ws);
+                    continue;
+                } 
+                workspaces.add(ws);
             }
+            return workspaces;
+        }
+        catch (IOException e)
+        {
+            throw new IOException(
+                "Failed to retrieve workspaces in " + parentDir + ": " + e.getMessage());
+        }
+    }
 
+    /**
+     * Updates preferences of each workspace with source preferences. 
+     * 
+     * @param source directory to read source preferences
+     * @param workspaces target Eclipse workspace paths
+     * @throws IOException
+     */
+    private static void formatWorkspaces(Path source, Set<Path> workspaces) throws IOException
+    {
+        for (Path ws : workspaces)
+        {
             try
             {
-                updateWorkspace(sourceWorkspace, target);
-                System.out.println("Workspace updated successfully: " + target);
+                copyPrefs(source, ws, UI_WBENCH_PREFS_FILENAME);
+                copyPrefs(source, ws, UI_EDITORS_PREFS_FILENAME);
+                copyPrefs(source, ws, JDT_CORE_PREFS_FILENAME);
+                copyPrefs(source, ws, JDT_UI_PREFS_FILENAME);
             }
             catch (IOException e)
             {
-                System.err.println("Workspace update failed: " + target + "\n" + e.getMessage() + "\n");
+                throw new IOException("Workspace update failed: " + ws + "\n" + e.getMessage());
             }
+        }
+    }
+
+    @Override
+    public Void call()
+    {
+        try
+        {
+            if (command.equals("clone"))
+            {
+                Set<Path> workspaces = getValidWorkspaces(to);
+                formatWorkspaces(from, workspaces);
+            }
+            else if (command.equals("export"))
+            {
+                copyPrefs(from, to, UI_WBENCH_PREFS_FILENAME);
+                copyPrefs(from, to, UI_EDITORS_PREFS_FILENAME);
+                copyPrefs(from, to, JDT_CORE_PREFS_FILENAME);
+                copyPrefs(from, to, JDT_UI_PREFS_FILENAME);
+                System.out.println("Exported preferences of '" + from + "' to '" + to + "'");
+            }
+            else
+            {
+                System.err.println("Invalid mode: " + command);
+            }   
+        }
+        catch (IOException e)
+        {
+            System.err.println(command + " failed: " + e.getMessage());
         }
         return null;
     }
