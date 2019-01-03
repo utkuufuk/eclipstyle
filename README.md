@@ -1,18 +1,17 @@
 # eclipstyle
-**Propagate code style & format accross multiple workspaces.**
+**Set up Eclipse workspace preferences once and use them everywhere!**
 
-Build (or [import](formatter.xml)) a formatter profile **once:**
-![Example](example.png)
+### How Does It Work?
+Clones
+ * code style formatting,
+ * font & color settings,
+ * text editor settings
 
-*You no longer have to export it as an XML file and then import it from each and every workspace:*
-
-## How Does It Work?
- 1. Fetches formatter preferences of the source workspace from `.metadata` directory.
- 2. Applies those preferences to all workspaces in the given parent directory.
+from a reference workspace to all other workspaces.
 
 ### Usage
 ``` sh
-java -jar eclipstyle.jar /path/to/source/workspace /path/to/all/workspaces
+java -jar eclipstyle.jar /path/to/ref/workspace /path/to/all/workspaces
 ```
 
 For example:
@@ -27,3 +26,8 @@ java -jar eclipstyle.jar ~/eclipse_workspaces/eclipstyle ~/eclipse_workspaces
 ### Download Binary Release
 You can download the latest release [here](https://github.com/utkuufuk/eclipstyle/releases).
 
+### Samples
+Feel free to import my [formatter profile](formatter.xml) or [preferences](sample_prefs).
+
+### Credits
+[picocli](https://github.com/remkop/picocli)
