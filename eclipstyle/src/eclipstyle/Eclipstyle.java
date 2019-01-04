@@ -55,7 +55,8 @@ public class Eclipstyle implements Callable<Void>
         }
         else
         {
-            throw new IOException("Could not locate prefs file " + prefsName + " in " + source);
+            System.err.println("Could not locate prefs file " + prefsName + " in " + source);
+            return;
         }
         target = target.resolve(prefsName);
         Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
@@ -96,31 +97,6 @@ public class Eclipstyle implements Callable<Void>
         }
     }
 
-    /**
-     * Updates preferences of each workspace with source preferences. 
-     * 
-     * @param source directory to read source preferences
-     * @param workspaces target Eclipse workspace paths
-     * @throws IOException
-     */
-    private static void formatWorkspaces(Path source, Set<Path> workspaces) throws IOException
-    {
-        for (Path ws : workspaces)
-        {
-            try
-            {
-                copyPrefs(source, ws, UI_WBENCH_PREFS_FILENAME);
-                copyPrefs(source, ws, UI_EDITORS_PREFS_FILENAME);
-                copyPrefs(source, ws, JDT_CORE_PREFS_FILENAME);
-                copyPrefs(source, ws, JDT_UI_PREFS_FILENAME);
-            }
-            catch (IOException e)
-            {
-                throw new IOException("Workspace update failed: " + ws + "\n" + e.getMessage());
-            }
-        }
-    }
-
     @Override
     public Void call()
     {
@@ -129,7 +105,15 @@ public class Eclipstyle implements Callable<Void>
             if (command.equals("clone"))
             {
                 Set<Path> workspaces = getValidWorkspaces(to);
-                formatWorkspaces(from, workspaces);
+
+                for (Path ws : workspaces)
+                {
+                    copyPrefs(from, Paths.get(ws + PREFS_SUB_DIR), UI_WBENCH_PREFS_FILENAME);
+                    copyPrefs(from, Paths.get(ws + PREFS_SUB_DIR), UI_EDITORS_PREFS_FILENAME);
+                    copyPrefs(from, Paths.get(ws + PREFS_SUB_DIR), JDT_CORE_PREFS_FILENAME);
+                    copyPrefs(from, Paths.get(ws + PREFS_SUB_DIR), JDT_UI_PREFS_FILENAME);
+                    System.out.println("Successfully updated Workspace preferences: " + ws);
+                }
             }
             else if (command.equals("export"))
             {
@@ -141,7 +125,7 @@ public class Eclipstyle implements Callable<Void>
             }
             else
             {
-                System.err.println("Invalid mode: " + command);
+                System.err.println("Invalid command: " + command);
             }   
         }
         catch (IOException e)
