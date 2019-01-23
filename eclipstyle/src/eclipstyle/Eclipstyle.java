@@ -26,7 +26,7 @@ public class Eclipstyle implements Callable<Void>
     private static final String PREFS_SUB_DIR =
         "/.metadata/.plugins/org.eclipse.core.runtime/.settings/";
 
-    @Parameters(index = "0", description = "Program command (import/export).")
+    @Parameters(index = "0", description = "Program command (clone/export).")
     private String command;
 
     @Parameters(index = "1", description = "Source path.")
