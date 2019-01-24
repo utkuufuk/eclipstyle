@@ -15,40 +15,13 @@
  */
 package picocli;
 
-import static java.util.Locale.ENGLISH;
-import static picocli.CommandLine.Help.Column.Overflow.SPAN;
-import static picocli.CommandLine.Help.Column.Overflow.TRUNCATE;
-import static picocli.CommandLine.Help.Column.Overflow.WRAP;
-import static picocli.CommandLine.Model.ArgsReflection.abbreviate;
-
-import java.io.BufferedReader;
-import java.io.Console;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.LineNumberReader;
-import java.io.PrintStream;
-import java.io.PrintWriter;
-import java.io.StreamTokenizer;
+import java.io.*;
 import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.lang.reflect.AccessibleObject;
-import java.lang.reflect.AnnotatedElement;
-import java.lang.reflect.Array;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Proxy;
-import java.lang.reflect.Type;
-import java.lang.reflect.WildcardType;
+import java.lang.reflect.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.InetAddress;
@@ -62,51 +35,19 @@ import java.nio.charset.Charset;
 import java.text.BreakIterator;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Currency;
-import java.util.Date;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.IdentityHashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Queue;
-import java.util.ResourceBundle;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.SortedSet;
-import java.util.Stack;
-import java.util.TimeZone;
-import java.util.TreeMap;
-import java.util.TreeSet;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.regex.Pattern;
-
-import picocli.CommandLine.Help;
 import picocli.CommandLine.Help.Ansi.IStyle;
 import picocli.CommandLine.Help.Ansi.Style;
 import picocli.CommandLine.Help.Ansi.Text;
-import picocli.CommandLine.Model.ArgSpec;
-import picocli.CommandLine.Model.ArgsReflection;
-import picocli.CommandLine.Model.CommandSpec;
-import picocli.CommandLine.Model.Messages;
-import picocli.CommandLine.Model.MethodParam;
-import picocli.CommandLine.Model.OptionSpec;
-import picocli.CommandLine.Model.ParserSpec;
-import picocli.CommandLine.Model.PositionalParamSpec;
-import picocli.CommandLine.Model.TypedMember;
-import picocli.CommandLine.Model.UnmatchedArgsBinding;
-import picocli.CommandLine.Model.UsageMessageSpec;
+import picocli.CommandLine.Model.*;
+
+import static java.util.Locale.ENGLISH;
+import static picocli.CommandLine.Model.ArgsReflection.abbreviate;
+import static picocli.CommandLine.Help.Column.Overflow.SPAN;
+import static picocli.CommandLine.Help.Column.Overflow.TRUNCATE;
+import static picocli.CommandLine.Help.Column.Overflow.WRAP;
 
 /**
  * <p>
@@ -200,7 +141,7 @@ import picocli.CommandLine.Model.UsageMessageSpec;
 public class CommandLine {
     
     /** This is picocli version {@value}. */
-    public static final String VERSION = "3.9.0-SNAPSHOT";
+    public static final String VERSION = "3.9.3-SNAPSHOT";
 
     private final Tracer tracer = new Tracer();
     private final CommandSpec commandSpec;
@@ -1098,6 +1039,7 @@ public class CommandLine {
      * </pre>
      * <p>{@code ExecutionExceptions} that occurred while executing the {@code Runnable} or {@code Callable} command are simply rethrown and not handled.</p>
      * @since 2.0 */
+    @SuppressWarnings("deprecation")
     public static class DefaultExceptionHandler<R> extends AbstractHandler<R, DefaultExceptionHandler<R>> implements IExceptionHandler, IExceptionHandler2<R> {
         public List<Object> handleException(ParameterException ex, PrintStream out, Help.Ansi ansi, String... args) {
             internalHandleParseException(ex, out, ansi, args); return Collections.<Object>emptyList(); }
@@ -4076,6 +4018,15 @@ public class CommandLine {
              * @since 3.1 */
             public String[] aliases() { return aliases.toArray(new String[0]); }
 
+            /** Returns all names of this command, including {@link #name()} and {@link #aliases()}.
+             * @since 3.9 */
+            public Set<String> names() {
+                Set<String> result = new LinkedHashSet<String>();
+                result.add(name());
+                result.addAll(Arrays.asList(aliases()));
+                return result;
+            }
+
             /** Returns the list of all options and positional parameters configured for this command.
              * @return an immutable list of all options and positional parameters for this command. */
             public List<ArgSpec> args() { return Collections.unmodifiableList(args); }
@@ -4289,9 +4240,13 @@ public class CommandLine {
                     if (tracer != null && tracer.isDebug()) {tracer.debug("Parser is configured to treat all unmatched options as positional parameter%n", arg);}
                     return false;
                 }
+                if (arg.length() == 1) {
+                    if (tracer != null && tracer.isDebug()) {tracer.debug("Single-character arguments that don't match known options are considered positional parameters%n", arg);}
+                    return false;
+                }
                 if (options().isEmpty()) {
                     boolean result = arg.startsWith("-");
-                    if (tracer != null && tracer.isDebug()) {tracer.debug("%s %s an option%n", arg, (result ? "resembles" : "doesn't resemble"));}
+                    if (tracer != null && tracer.isDebug()) {tracer.debug("'%s' %s an option%n", arg, (result ? "resembles" : "doesn't resemble"));}
                     return result;
                 }
                 int count = 0;
@@ -4301,7 +4256,7 @@ public class CommandLine {
                     }
                 }
                 boolean result = count > 0 && count * 10 >= optionsMap().size() * 9; // at least one prefix char in common with 9 out of 10 options
-                if (tracer != null && tracer.isDebug()) {tracer.debug("%s %s an option: %d matching prefix chars out of %d option names%n", arg, (result ? "resembles" : "doesn't resemble"), count, optionsMap().size());}
+                if (tracer != null && tracer.isDebug()) {tracer.debug("'%s' %s an option: %d matching prefix chars out of %d option names%n", arg, (result ? "resembles" : "doesn't resemble"), count, optionsMap().size());}
                 return result;
             }
         }
@@ -5288,7 +5243,7 @@ public class CommandLine {
             /** Sets the value of this argument to the specified value and returns the previous value. Delegates to the current {@link #setter()}.
              * @deprecated use {@link #setValue(Object)} instead. This was a design mistake.
              * @since 3.5 */
-            public <T> T setValue(T newValue, CommandLine commandLine) throws PicocliException {
+            @Deprecated public <T> T setValue(T newValue, CommandLine commandLine) throws PicocliException {
                 return setValue(newValue);
             }
 
@@ -5348,7 +5303,7 @@ public class CommandLine {
                 if (parser.splitQuotedStrings()) {
                     return debug(value.split(splitRegex(), limit), "Split (ignoring quotes)", value);
                 }
-                return debug(splitRespectingQuotedStrings(value, limit, parser), "Split", value);
+                return debug(splitRespectingQuotedStrings(value, limit, parser, this, splitRegex()), "Split", value);
             }
             private String[] debug(String[] result, String msg, String value) {
                 Tracer t = new Tracer();
@@ -5356,7 +5311,7 @@ public class CommandLine {
                 return result;
             }
             // @since 3.7
-            private String[] splitRespectingQuotedStrings(String value, int limit, ParserSpec parser) {
+            private static String[] splitRespectingQuotedStrings(String value, int limit, ParserSpec parser, ArgSpec argSpec, String splitRegex) {
                 StringBuilder splittable = new StringBuilder();
                 StringBuilder temp = new StringBuilder();
                 StringBuilder current = splittable;
@@ -5384,22 +5339,22 @@ public class CommandLine {
                     current.appendCodePoint(ch);
                 }
                 if (temp.length() > 0) {
-                    new Tracer().warn("Unbalanced quotes in [%s] for %s (value=%s)%n", temp, this, value);
+                    new Tracer().warn("Unbalanced quotes in [%s] for %s (value=%s)%n", temp, argSpec, value);
                     quotedValues.add(temp.toString());
                     temp.setLength(0);
                 }
-                String[] result = splittable.toString().split(splitRegex(), limit);
+                String[] result = splittable.toString().split(splitRegex, limit);
                 for (int i = 0; i < result.length; i++) {
                     result[i] = restoreQuotedValues(result[i], quotedValues, parser);
                 }
                 if (!quotedValues.isEmpty()) {
-                    new Tracer().warn("Unable to respect quotes while splitting value %s for %s (unprocessed remainder: %s)%n", value, this, quotedValues);
-                    return value.split(splitRegex(), limit);
+                    new Tracer().warn("Unable to respect quotes while splitting value %s for %s (unprocessed remainder: %s)%n", value, argSpec, quotedValues);
+                    return value.split(splitRegex, limit);
                 }
                 return result;
             }
 
-            private String restoreQuotedValues(String part, Queue<String> quotedValues, ParserSpec parser) {
+            private static String restoreQuotedValues(String part, Queue<String> quotedValues, ParserSpec parser) {
                 StringBuilder result = new StringBuilder();
                 boolean escaping = false, inQuote = false, skip = false;
                 for (int ch = 0, i = 0; i < part.length(); i += Character.charCount(ch)) {
@@ -6311,12 +6266,15 @@ public class CommandLine {
              * @return the String value found in the resource bundle for the specified key, or the specified default value
              */
             public String getString(String key, String defaultValue) {
-                if (rb == null || keys.isEmpty()) { return defaultValue; }
+                if (isEmpty()) { return defaultValue; }
                 String cmd = spec.qualifiedName(".");
                 if (keys.contains(cmd + "." + key)) { return rb.getString(cmd + "." + key); }
                 if (keys.contains(key)) { return rb.getString(key); }
                 return defaultValue;
             }
+
+            boolean isEmpty() { return rb == null || keys.isEmpty(); }
+
             /** Returns the String array value found in the resource bundle for the specified key, or the specified default value if not found.
              * Multi-line strings can be specified in the resource bundle with {@code key.0}, {@code key.1}, {@code key.2}, etc.
              * @param key unqualified resource bundle key. This method will first try to find a value by qualifying the key with the command's fully qualified name,
@@ -6325,7 +6283,7 @@ public class CommandLine {
              * @return the String array value found in the resource bundle for the specified key, or the specified default value
              */
             public String[] getStringArray(String key, String[] defaultValues) {
-                if (rb == null || keys.isEmpty()) { return defaultValues; }
+                if (isEmpty()) { return defaultValues; }
                 String cmd = spec.qualifiedName(".");
                 List<String> result = addAllWithPrefix(rb, cmd + "." + key, keys, new ArrayList<String>());
                 if (!result.isEmpty()) { return result.toArray(new String[0]); }
@@ -7757,8 +7715,9 @@ public class CommandLine {
         }
 
         private String[] splitKeyValue(ArgSpec argSpec, String value) {
-            String[] keyValue = value.split("=", 2);
-            if (keyValue.length < 2) {
+            String[] keyValue = ArgSpec.splitRespectingQuotedStrings(value, 2, config(), argSpec, "=");
+
+                if (keyValue.length < 2) {
                 String splitRegex = argSpec.splitRegex();
                 if (splitRegex.length() == 0) {
                     throw new ParameterException(CommandLine.this, "Value for option " + optionDescription("",
@@ -7998,7 +7957,7 @@ public class CommandLine {
             isHelpRequested |= command.helpCommand();
         }
         private void updateHelpRequested(ArgSpec argSpec) {
-            if (argSpec.isOption()) {
+            if (!parseResult.isInitializingDefaultValues && argSpec.isOption()) {
                 OptionSpec option = (OptionSpec) argSpec;
                 isHelpRequested                  |= is(argSpec, "help", option.help());
                 parseResult.versionHelpRequested |= is(argSpec, "versionHelp", option.versionHelp());
@@ -8039,15 +7998,21 @@ public class CommandLine {
                 return new ITypeConverter<Object>() {
                     @SuppressWarnings("unchecked")
                     public Object convert(String value) throws Exception {
+                        String sensitivity = "case-sensitive";
                         if (commandSpec.parser().caseInsensitiveEnumValuesAllowed()) {
                             String upper = value.toUpperCase();
                             for (Object enumConstant : type.getEnumConstants()) {
                                 if (upper.equals(String.valueOf(enumConstant).toUpperCase())) { return enumConstant; }
                             }
+                            sensitivity = "case-insensitive";
                         }
                         try { return Enum.valueOf((Class<Enum>) type, value); }
-                        catch (Exception ex) { throw new TypeConversionException(
-                                String.format("expected one of %s but was '%s'", Arrays.asList(type.getEnumConstants()), value)); }
+                        catch (Exception ex) {
+                            Enum<?>[] constants = ((Class<Enum<?>>) type).getEnumConstants();
+                            String[] names = new String[constants.length];
+                            for (int i = 0; i < names.length; i++) { names[i] = constants[i].name(); }
+                            throw new TypeConversionException(
+                                String.format("expected one of %s (%s) but was '%s'", Arrays.asList(names), sensitivity, value)); }
                     }
                 };
             }
@@ -8742,7 +8707,8 @@ public class CommandLine {
                 StringBuilder clusteredOptional = new StringBuilder("-");
                 for (OptionSpec option : options) {
                     if (option.hidden()) { continue; }
-                    if (option.type() == boolean.class || option.type() == Boolean.class) {
+                    boolean isFlagOption = option.type() == boolean.class || option.type() == Boolean.class;
+                    if (isFlagOption && option.arity().max <= 0) { // #612 consider arity: boolean options may require a parameter
                         String shortestName = option.shortestName();
                         if (shortestName.length() == 2 && shortestName.startsWith("-")) {
                             booleanOptions.add(option);
